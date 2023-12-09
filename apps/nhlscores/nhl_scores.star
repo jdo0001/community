@@ -83,6 +83,7 @@ MAGNIFY_LOGO = """
 def main(config):
     renderCategory = []
     selectedTeam = config.get("selectedTeam", "all")
+    spoilerTeam = config.get("spoilerTeam", "none")
     displayType = config.get("displayType", "colors")
     displayTop = config.get("displayTop", "league")
     pregameDisplay = config.get("pregameDisplay", "record")
@@ -142,8 +143,9 @@ def main(config):
             awayScoreColor = "#fff"
             teamFont = "Dina_r400-6"
             scoreFont = "Dina_r400-6"
+            hideScores = home == spoilerTeam or away == spoilerTeam
 
-            if gameStatus == "pre":
+            if gameStatus == "pre" or hideScores:
                 gameTime = s["date"]
                 scoreFont = "CG-pixel-3x5-mono"
                 convertedTime = time.parse_time(gameTime, format = "2006-01-02T15:04Z").in_location(timezone)
@@ -151,7 +153,10 @@ def main(config):
                     gameTime = convertedTime.format("Jan 2")
                 else:
                     gameTime = convertedTime.format("3:04 PM")
-                if pregameDisplay == "odds":
+                if hideScores:
+                    homeScore = ""
+                    awayScore = ""
+                elif pregameDisplay == "odds":
                     checkOdds = competition.get("odds", "NO")
                     if checkOdds != "NO":
                         checkOU = competition["odds"][0].get("overUnder", "NO")
@@ -790,6 +795,14 @@ def get_schema():
                 id = "selectedTeam",
                 name = "Team Focus",
                 desc = "Only show scores for selected team.",
+                icon = "gear",
+                default = teamOptions[0].value,
+                options = teamOptions,
+            ),
+            schema.Dropdown(
+                id = "spoilerTeam",
+                name = "Hide Spoilers",
+                desc = "Hide scores for the selected team.",
                 icon = "gear",
                 default = teamOptions[0].value,
                 options = teamOptions,

@@ -26,3 +26,5 @@ BUILD.bazel
 *.webp
 *.gif
 *.tar.gz
+
+.idea
