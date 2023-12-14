@@ -24,17 +24,22 @@ def main(config):
     event_components = []
     for event_data in upcoming:
         component = render.Box(
-            color = event_data["color"],
-            width = column_width,
-            height = 32,
-            child = render.Column(
-                main_align = "center",
-                cross_align = "center",
-                children = [
-                    render.Image(src = event_data["logo"], height = 12, width = 12),
-                    render.Box(width = column_width - 4, height = 6, child = render.Text(content = event_data["matchup"], height = 5, font="CG-pixel-3x5-mono")),
-                    render.Box(width = column_width - 4, height = 6, child = render.Text(content = event_data["date"], height = 5,  font="CG-pixel-3x5-mono")),
-                    render.Box(width = column_width - 4, height = 6, child = render.Text(content = event_data["time"], height = 5, font="CG-pixel-3x5-mono")),
+            color=event_data["color"],
+            width=column_width,
+            height=32,
+            child=render.Column(
+                main_align="center",
+                cross_align="center",
+                children=[
+                    render.Box(width=12, height=12,
+                               child=render.Image(src=event_data["logo"], height=event_data["logo_size"],
+                                                  width=event_data["logo_size"])),
+                    render.Box(width=column_width - 4, height=6,
+                               child=render.Text(content=event_data["matchup"], height=5, font="CG-pixel-3x5-mono")),
+                    render.Box(width=column_width - 4, height=6,
+                               child=render.Text(content=event_data["date"], height=5, font="CG-pixel-3x5-mono")),
+                    render.Box(width=column_width - 4, height=6,
+                               child=render.Text(content=event_data["time"], height=5, font="CG-pixel-3x5-mono")),
                 ]
             )
         )
@@ -71,8 +76,9 @@ def get_next_2(schedule, team, timezone):
         event_data = {
             "matchup": "vs %s" % away_team,
             "date": event_time.format("1/2"),
-            "time": event_time.format("3:04 PM"),
+            "time": event_time.format("3:04 PM")[:7],
             "logo": get_team_logo(away_logo_url),
+            "logo_size": logo_size_map.get(away_team, 12),
             "color": get_team_color(away_team),
         }
         upcoming.append(event_data)
@@ -99,6 +105,21 @@ def get_team_logo(logo_url):
         return res.body()
     fallback_logo_url = "https://i.ibb.co/5LMp8T1/transparent.png"
     return http.get(url=fallback_logo_url).body()
+
+
+logo_size_map = {
+    "ANA": 14,
+    "ARI": 14,
+    "CAR": 14,
+    "CBJ": 14,
+    "DAL": 14,
+    "DET": 14,
+    "MIN": 14,
+    "NSH": 14,
+    "SJ": 14,
+    "SEA": 14,
+    "TOR": 14,
+}
 
 
 def get_schema():
