@@ -43,8 +43,8 @@ ALT_LOGO = """
 def main(config):
     renderCategory = []
     rotationSpeed = config.get("rotationSpeed", "5")
-    divisionType = config.get("divisionType", "7")
-    teamsToShow = int(config.get("teamsOptions", "4"))
+    divisionType = config.get("divisionType", "31")
+    teamsToShow = int(config.get("teamsOptions", "3"))
     displayTop = config.get("displayTop", "league")
     timeColor = config.get("displayTimeColor", "#FFA500")
     location = config.get("location", DEFAULT_LOCATION)
@@ -54,39 +54,35 @@ def main(config):
     apiURL = API + "?group=" + divisionType
     league = {LEAGUE: apiURL}
 
-    standings = get_standings(league)
+    standings = get_standings(league)[0]
 
     if (standings):
-        for i, s in enumerate(standings[0]["children"]):
-            entries = s["standings"]["entries"]
+        entries = standings["standings"]["entries"]
 
-            if entries:
-                entriesToDisplay = teamsToShow
-                divisionName = s["name"].replace(" Division", "")
-                stats = entries[0]["stats"]
+        if entries:
+            entriesToDisplay = teamsToShow
+            divisionName = standings["name"].replace(" Division", "")
 
-                statNumber = 0
-                for j, k in enumerate(stats):
-                    if k["name"] == "points":
-                        statNumber = j
+            # Takes into account the first few tiebreaker scenarios here: https://www.nhl.com/info/standings-info/tie-breaking-procedure
+            entries = sorted(entries, get_points, reverse = True) # Sort by points first most -> least
+            sorted(entries, get_games_played) # Then sort by games played least -> most (essentially, sorting by higher points pct)
+            sorted(entries, get_regulation_wins, reverse = True) # Then by regulation wins most -> least
 
-                entries = sorted(entries, key = lambda e: e["stats"][statNumber]["value"], reverse = True)
-
-                for x in range(0, len(entries), entriesToDisplay):
-                    renderCategory.extend(
-                        [
-                            render.Column(
-                                expanded = True,
-                                main_align = "start",
-                                cross_align = "start",
-                                children = [
-                                    render.Column(
-                                        children = get_team(x, entries, entriesToDisplay, i, now, rotationSpeed, timeColor, divisionName, displayTop),
-                                    ),
-                                ],
-                            ),
-                        ],
-                    )
+            for x in range(0, len(entries), entriesToDisplay):
+                renderCategory.extend(
+                    [
+                        render.Column(
+                            expanded = True,
+                            main_align = "start",
+                            cross_align = "start",
+                            children = [
+                                render.Column(
+                                    children = get_team(x, entries, entriesToDisplay, timeColor, divisionName, displayTop),
+                                ),
+                            ],
+                        ),
+                    ],
+                )
 
         return render.Root(
             delay = int(rotationSpeed) * 1000,
@@ -96,14 +92,40 @@ def main(config):
     else:
         return []
 
+def get_points(entry):
+    for stat in entry.get("stats"):
+        if stat.get("name") == "points":
+            return stat.get("value")
+    return 0  # will never get here, but need a return value
+
+def get_regulation_wins(entry):
+    for stat in entry.get("stats"):
+        if stat.get("name") == "regWins":
+            return stat.get("value")
+    return 0  # will never get here, but need a return value
+
+def get_games_played(entry):
+    for stat in entry.get("stats"):
+        if stat.get("name") == "gamesPlayed":
+            return stat.get("value")
+    return 0  # will never get here, but need a return value
+
 divisionOptions = [
     schema.Option(
-        display = "Eastern Conference",
-        value = "7",
+        display = "Atlantic Division",
+        value = "32",
     ),
     schema.Option(
-        display = "Western Conference",
-        value = "8",
+        display = "Metropolitan Division",
+        value = "33",
+    ),
+    schema.Option(
+        display = "Central Division",
+        value = "31",
+    ),
+    schema.Option(
+        display = "Pacific Division",
+        value = "30",
     ),
 ]
 
@@ -246,7 +268,7 @@ def get_schema():
                 name = "Teams Per View",
                 desc = "How many teams it should show at once.",
                 icon = "gear",
-                default = teamsOptions[1].value,
+                default = teamsOptions[0].value,
                 options = teamsOptions,
             ),
             schema.Dropdown(
@@ -283,7 +305,7 @@ def get_team_color(teamid):
     teamcolor = get_background_color(team["abbreviation"], team["color"])
     return teamcolor
 
-def get_team(x, s, entriesToDisplay, i, now, rotationSpeed, timeColor, divisionName, displayTop):
+def get_team(x, s, entriesToDisplay, timeColor, divisionName, displayTop):
     output = []
     teamWins = ""
     teamLosses = ""
@@ -306,12 +328,6 @@ def get_team(x, s, entriesToDisplay, i, now, rotationSpeed, timeColor, divisionN
             theTime = LEAGUE_DISPLAY
             timeBox += LEAGUE_DISPLAY_OFFSET
             statusBox -= LEAGUE_DISPLAY_OFFSET
-        else:
-            now = now + time.parse_duration("%ds" % int(i) * int(rotationSpeed))
-            theTime = now.format("3:04")
-            if len(str(theTime)) > 4:
-                timeBox += 4
-                statusBox -= 4
         topColumn = [
             render.Row(
                 expanded = True,
