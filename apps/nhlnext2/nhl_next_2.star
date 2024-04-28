@@ -70,17 +70,25 @@ def get_next_2(schedule, team, timezone):
 
         # This is a game we want to add to the upcoming list
         away_team = competition["competitors"][1]["team"]["abbreviation"]
-        event_time = time.parse_time(event["date"], format="2006-01-02T15:04Z").in_location(timezone)
         away_logo_url = competition["competitors"][1]["team"]["logos"][3]["href"]
 
         event_data = {
             "matchup": "vs %s" % away_team,
-            "date": event_time.format("1/2"),
-            "time": event_time.format("3:04 PM")[:7],
             "logo": get_team_logo(away_logo_url),
             "logo_size": logo_size_map.get(away_team, 12),
             "color": get_team_color(away_team),
         }
+
+        if event["timeValid"]:
+            event_time = time.parse_time(event["date"], format="2006-01-02T15:04Z").in_location(timezone)
+            event_data["date"] = event_time.format("1/2")
+            event_data["time"] = event_time.format("3:04 PM")[:7]
+        else:
+            # This is a game with a TBD time.
+            event_time = time.parse_time(event["date"], format="2006-01-02T15:04Z")
+            event_data["date"] = event_time.format("1/2")
+            event_data["time"] = "TBD"
+
         upcoming.append(event_data)
     return upcoming
 
